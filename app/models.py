@@ -120,7 +120,12 @@ class Job(Base):
 
     @property
     def runtime_minutes(self) -> int:
-        """Actual runtime, or the estimate while the job is still queued."""
+        """Whole minutes of wall-clock runtime; 0 until the job has started.
+
+        Truncated, not rounded up: the one-minute billing floor lives in
+        ``app.engine.billing`` so this stays a plain measurement of elapsed
+        time and the rounding rule is stated in exactly one place.
+        """
         if self.started_at is None:
             return 0
         end = self.ended_at or utcnow()

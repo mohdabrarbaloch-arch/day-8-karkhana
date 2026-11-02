@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+*.pyo
+.venv
+venv
+.env
+*.db
+*.sqlite3
+.pytest_cache
+.ruff_cache
+.git
+.gitignore
+docs
+tests
+*.md
+!README.md
+.vercel

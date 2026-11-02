@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="dark" />
+<meta name="description" content="Karkhana — GPU compute control plane with gang scheduling, EASY backfill and auditable chargeback." />
+<title>Karkhana — GPU Compute Control Plane</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ─────────────────────────────── login ─────────────────────────────── -->
+<section id="view-login" class="login-wrap">
+  <div class="login-card">
+    <div class="brand brand-lg">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      </span>
+      <div>
+        <h1>Karkhana</h1>
+        <p class="brand-sub">کارخانہ · GPU compute control plane</p>
+      </div>
+    </div>
+
+    <form id="login-form" class="stack" novalidate>
+      <label class="field">
+        <span>Email</span>
+        <input id="login-email" type="email" name="email" autocomplete="username"
+               value="admin@karkhana.dev" required />
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input id="login-password" type="password" name="password"
+               autocomplete="current-password" value="Karkhana2026!" required />
+      </label>
+      <button class="btn btn-primary btn-block" type="submit" id="login-btn">Sign in</button>
+      <p class="login-error" id="login-error" role="alert" hidden></p>
+    </form>
+
+    <div class="login-foot">
+      <p><strong>Demo account</strong> is pre-filled. It has admin rights on a
+         simulated four-node cluster — nothing here talks to real hardware.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────────────────────── app ─────────────────────────────── -->
+<div id="app" class="app" hidden>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <rect x="3" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="3" width="7" height="7" rx="1.5"/>
+          <rect x="3" y="14" width="7" height="7" rx="1.5"/>
+          <rect x="14" y="14" width="7" height="7" rx="1.5"/>
+        </svg>
+      </span>
+      <span class="brand-name">Karkhana</span>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab is-active" data-view="cluster" role="tab" aria-selected="true">Cluster</button>
+      <button class="tab" data-view="jobs" role="tab" aria-selected="false">Jobs</button>
+      <button class="tab" data-view="billing" role="tab" aria-selected="false">Billing</button>
+    </nav>
+
+    <div class="topbar-right">
+      <span class="who" id="who"></span>
+      <button class="btn btn-ghost btn-sm" id="logout-btn" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main class="main">
+
+    <!-- ░░ cluster ░░ -->
+    <section id="view-cluster" class="view is-active" role="tabpanel">
+      <div class="stat-grid">
+        <article class="stat">
+          <p class="stat-label">Utilisation</p>
+          <p class="stat-value" id="s-util">—</p>
+          <div class="meter" aria-hidden="true"><span id="s-util-bar"></span></div>
+        </article>
+        <article class="stat">
+          <p class="stat-label">GPUs held</p>
+          <p class="stat-value" id="s-alloc">—</p>
+          <p class="stat-foot" id="s-alloc-foot"></p>
+        </article>
+        <article class="stat">
+          <p class="stat-label">Queue</p>
+          <p class="stat-value" id="s-queued">—</p>
+          <p class="stat-foot" id="s-queued-foot"></p>
+        </article>
+        <article class="stat">
+          <p class="stat-label">Spend today</p>
+          <p class="stat-value" id="s-cost">—</p>
+          <p class="stat-foot" id="s-cost-foot"></p>
+        </article>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Nodes</h2>
+            <p class="panel-sub">Per-machine allocation. A dead node still counts
+               toward capacity — that is why utilisation drops when one fails.</p>
+          </div>
+        </div>
+        <div class="node-list" id="node-list"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Scheduler</h2>
+            <p class="panel-sub">One pass: priority + ageing, gang placement, then
+               EASY backfill inside the head job's reservation.</p>
+          </div>
+          <div class="panel-actions">
+            <button class="btn btn-primary" id="run-scheduler" type="button">Run pass</button>
+            <button class="btn btn-ghost" id="reset-scheduler" type="button">Reset</button>
+          </div>
+        </div>
+        <div class="queue-list" id="queue-list"></div>
+        <div class="sched-result" id="sched-result" hidden></div>
+      </div>
+    </section>
+
+    <!-- ░░ jobs ░░ -->
+    <section id="view-jobs" class="view" role="tabpanel" hidden>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Submit a job</h2>
+            <p class="panel-sub">A gang request (<code>span=node</code>) needs all its
+               GPUs on one machine. Use <code>span=any</code> to allow spreading.</p>
+          </div>
+        </div>
+        <form id="job-form" class="job-form" novalidate>
+          <label class="field">
+            <span>Name</span>
+            <input id="j-name" name="name" required maxlength="120" placeholder="urdu-asr-finetune" />
+          </label>
+          <label class="field">
+            <span>GPUs</span>
+            <input id="j-gpus" name="gpus" type="number" min="1" max="64" value="2" required />
+          </label>
+          <label class="field">
+            <span>Model</span>
+            <select id="j-model" name="gpu_model">
+              <option value="">Any</option>
+              <option value="H100-80GB">H100-80GB</option>
+              <option value="A100-80GB">A100-80GB</option>
+              <option value="L40S-48GB">L40S-48GB</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Span</span>
+            <select id="j-span" name="span">
+              <option value="node">node (gang)</option>
+              <option value="any">any (spread)</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Priority</span>
+            <input id="j-priority" name="priority" type="number" min="1" max="10" value="5" required />
+          </label>
+          <label class="field">
+            <span>Est. minutes</span>
+            <input id="j-duration" name="duration_minutes" type="number" min="1" value="60" required />
+          </label>
+          <label class="field field-wide">
+            <span>Command</span>
+            <input id="j-command" name="command" maxlength="4000" placeholder="python train.py --epochs 3" />
+          </label>
+          <div class="field field-wide form-actions">
+            <button class="btn btn-primary" type="submit" id="job-submit">Queue job</button>
+            <span class="form-error" id="job-error" role="alert" hidden></span>
+          </div>
+        </form>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div><h2>Jobs</h2></div>
+          <div class="panel-actions">
+            <select id="job-filter" class="select-sm" aria-label="Filter by status">
+              <option value="">All statuses</option>
+              <option value="queued">Queued</option>
+              <option value="running">Running</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="cancelled">Cancelled</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>Job</th><th>GPUs</th><th>Status</th><th>Runtime</th><th>Why</th><th></th></tr>
+            </thead>
+            <tbody id="job-rows"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="jobs-empty" hidden>No jobs yet — queue one above.</p>
+      </div>
+    </section>
+
+    <!-- ░░ billing ░░ -->
+    <section id="view-billing" class="view" role="tabpanel" hidden>
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Chargeback</h2>
+            <p class="panel-sub">
+              <code>cost = gpus × (billed minutes ÷ 60) × rate</code> — rounded up to
+              one minute, rounded to cents. Reproducible by hand.
+            </p>
+          </div>
+          <div class="panel-actions">
+            <select id="billing-days" class="select-sm" aria-label="Window">
+              <option value="7">Last 7 days</option>
+              <option value="30" selected>Last 30 days</option>
+              <option value="90">Last 90 days</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>Team</th><th>Jobs</th><th>GPU-hours</th><th>Cost</th></tr>
+            </thead>
+            <tbody id="billing-rows"></tbody>
+          </table>
+        </div>
+        <div class="billing-total" id="billing-total"></div>
+        <p class="empty" id="billing-empty" hidden>No finished jobs in this window.</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="/static/app.js" defer></script>
+</body>
+</html>

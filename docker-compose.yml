@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: karkhana
+      POSTGRES_PASSWORD: karkhana
+      POSTGRES_DB: karkhana
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U karkhana -d karkhana"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+psycopg://karkhana:karkhana@db:5432/karkhana
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in your shell or .env}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      ALLOW_DEMO_SEED: ${ALLOW_DEMO_SEED:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

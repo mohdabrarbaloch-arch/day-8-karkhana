@@ -46,14 +46,6 @@ class Node(Base):
     hourly_rate_usd: Mapped[float] = mapped_column(default=2.50)
     created_at: Mapped[datetime] = mapped_column(UTCDateTime, default=utcnow)
 
-    __table_args__ = (
-        # A node cannot hold more GPUs than it physically has.
-        # Enforced in the API as well, but this is the guarantee.
-        # (CheckConstraint expressed here for portability across SQLite/Postgres.)
-        # Added in the migration for clarity; SQLite parses it fine.
-        # See app/routers/nodes.py for the user-facing 409.
-    )
-
     @property
     def free_gpus(self) -> int:
         return max(0, self.total_gpus - self.allocated_gpus)

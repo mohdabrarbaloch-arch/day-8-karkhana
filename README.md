@@ -53,20 +53,6 @@ Three problems this solves that a naive "first come, first served" loop does not
 - **Auth** — JWT, bcrypt hashing, two enforced roles (`admin`, `operator`).
   The first account on an empty database becomes `admin`.
 
-## Screenshots
-
-| Cluster | Scheduler |
-|---|---|
-| ![Cluster view](screenshots/02-cluster.png) | ![Scheduler pass](screenshots/03-scheduler.png) |
-
-| Jobs | Chargeback |
-|---|---|
-| ![Jobs](screenshots/04-jobs.png) | ![Billing](screenshots/05-billing.png) |
-
-Mobile, at 390px with no horizontal overflow:
-
-![Mobile](screenshots/06-mobile.png)
-
 ## Quick start
 
 ```bash
